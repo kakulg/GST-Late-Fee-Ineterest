@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GST Late Fee & Interest Calculator</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
+  .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+  h1 { color: #1e3a8a; margin-top: 10px; }
+  .logo { display: block; margin: auto; max-width: 150px; height: auto; }
+  label { display: block; margin-top: 10px; font-weight: bold; }
+  select, input[type="number"], input[type="date"], button { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #cbd5e1; border-radius: 5px; font-size: 14px; }
+  button { background: #2563eb; color: white; border: none; cursor: pointer; }
+  button:hover { background: #1d4ed8; }
+  .results { margin-top: 20px; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .result-card { background: #f1f5f9; padding: 15px; border-radius: 8px; text-align: center; }
+  .result-card h2 { margin: 0; font-size: 1.5em; }
+  .result-card p { margin: 5px 0 0; color: #475569; }
+</style>
+</head>
+<body>
+<div class="container">
+  <img src="logo.jpg" alt="Logo" class="logo" />
+  <h1>GST Late Fee & Interest Calculator</h1>
+
+  <label for="return-type">Return Type</label>
+  <select id="return-type">
+    <option value="">Select return type</option>
+    <option value="GSTR-3B">GSTR-3B</option>
+    <option value="GSTR-1">GSTR-1</option>
+  </select>
+
+  <label for="tax-amount">Tax Amount Payable (₹)</label>
+  <input type="number" id="tax-amount" placeholder="Enter amount in ₹" />
+
+  <label for="due-date">Due Date</label>
+  <input type="date" id="due-date" />
+
+  <label for="filing-date">Actual Filing Date</label>
+  <input type="date" id="filing-date" />
+
+  <button onclick="calculateGST()">Calculate Late Fee & Interest</button>
+
+  <div class="results" id="results" style="display:none;">
+    <div class="result-card">
+      <h2 id="days-delayed">0</h2>
+      <p>Days Delayed</p>
+    </div>
+    <div class="result-card">
+      <h2 id="late-fee">₹0</h2>
+      <p>Late Fee</p>
+    </div>
+    <div class="result-card">
+      <h2 id="interest-amount">₹0</h2>
+      <p>Interest Amount</p>
+    </div>
+    <div class="result-card">
+      <h2 id="total-amount">₹0</h2>
+      <p>Total Amount Payable</p>
+    </div>
+  </div>
+</div>
+
+<script>
+function formatCurrency(amount) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2
+  }).format(amount);
+}
+
+function calculateGST() {
+  const returnType = document.getElementById('return-type').value;
+  const dueDate = document.getElementById('due-date').value;
+  const filingDate = document.getElementById('filing-date').value;
+  const taxAmount = parseFloat(document.getElementById('tax-amount').value);
+
+  if (!returnType || !dueDate || !filingDate || isNaN(taxAmount)) {
+    alert('Please fill all fields');
+    return;
+  }
+
+  const due = new Date(dueDate);
+  const filing = new Date(filingDate);
+
+  if (filing <= due) {
+    document.getElementById('days-delayed').innerText = 0;
+    document.getElementById('late-fee').innerText = formatCurrency(0);
+    document.getElementById('interest-amount').innerText = formatCurrency(0);
+    document.getElementById('total-amount').innerText = formatCurrency(taxAmount);
+    document.getElementById('results').style.display = 'grid';
+    return;
+  }
+
+  const daysDelayed = Math.ceil((filing - due) / (1000 * 3600 * 24));
+
+  let lateFee = 0;
+  if (returnType === 'GSTR-3B') {
+    lateFee = Math.min(daysDelayed * 50, 10000);
+  } else if (returnType === 'GSTR-1') {
+    lateFee = Math.min(daysDelayed * 50, 10000);
+  }
+
+  const interestRate = 0.18; // 18% per annum
+  const interestAmount = (taxAmount * interestRate * daysDelayed) / 365;
+  const totalAmount = taxAmount + lateFee + interestAmount;
+
+  document.getElementById('days-delayed').innerText = daysDelayed;
+  document.getElementById('late-fee').innerText = formatCurrency(lateFee);
+  document.getElementById('interest-amount').innerText = formatCurrency(interestAmount);
+  document.getElementById('total-amount').innerText = formatCurrency(totalAmount);
+
+  document.getElementById('results').style.display = 'grid';
+}
+</script>
+</body>
+</html>
