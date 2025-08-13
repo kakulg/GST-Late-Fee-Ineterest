@@ -3,288 +3,437 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>GST Late Fee & Interest Calculator – Oneness Compliance</title>
-<meta name="description" content="Calculate late fee and interest for GSTR returns (GSTR-1, 3B, 4, 5, 5A, 6, 7, 8, 9, CMP-08) as per current GST rules in India." />
+<title>GST Late Fee & Interest Calculator</title>
+<meta name="description" content="Auto due date + late fee & interest calculator for GST returns (GSTR-1, 3B, 4, 5, 5A, 6, 7, 8, 9, CMP-08) with state-wise stagger." />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --blue:#0f3b82; --blue2:#1086ff; --ink:#0f172a; --muted:#64748b; --bg:#f8fafc; --card:#ffffff; --ok:#0a7d2f; --warn:#d97706; --err:#b91c1c;
+    --blue:#0f3b82; --ink:#0f172a; --muted:#64748b; --bg:#f8fafc; --card:#ffffff;
+    --ok:#0a7d2f; --warn:#b45309; --bad:#b91c1c;
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
   header{max-width:1060px;margin:24px auto 12px;padding:0 16px;display:flex;align-items:center;gap:14px}
-  header img{height:56px;width:auto}
-  header h1{font-size:clamp(20px,3vw,28px);margin:0;color:var(--blue);letter-spacing:.3px}
+  header img{height:56px;width:auto;border-radius:8px}
+  header h1{font-size:clamp(20px,3vw,28px);margin:0;color:var(--blue)}
   header p{margin:2px 0 0;color:var(--muted)}
   .wrap{max-width:1060px;margin:0 auto;padding:16px}
   .card{background:var(--card);border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 4px 18px rgba(2,6,23,.05);padding:18px}
   .grid{display:grid;grid-template-columns:1fr;gap:14px}
-  @media(min-width:820px){.grid{grid-template-columns:repeat(2,1fr)}}
-  label{font-weight:600;font-size:13px;color:#0f172a}
+  @media(min-width:860px){.grid{grid-template-columns:repeat(2,1fr)}}
+  label{font-weight:600;font-size:13px}
   input,select{width:100%;padding:12px 14px;border:1px solid #d1d5db;border-radius:12px;background:#fff;font:inherit}
-  .row{display:flex;gap:10px;align-items:center}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .hint{font-size:12px;color:var(--muted)}
   .btn{display:inline-block;width:100%;text-align:center;padding:14px 16px;border-radius:12px;border:0;background:var(--blue);color:#fff;font-weight:700;cursor:pointer}
-  .btn:hover{background:#0c326f}
-  .muted{color:var(--muted)}
+  .btn:hover{filter:brightness(.95)}
   .result{display:grid;gap:12px;grid-template-columns:repeat(1,1fr);margin-top:12px}
   @media(min-width:900px){.result{grid-template-columns:repeat(4,1fr)}}
   .tile{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px;text-align:center}
   .tile .v{font-size:24px;font-weight:700}
-  .good{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--err)} .blue{color:var(--blue)}
+  .good{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)} .blue{color:var(--blue)}
   .notes{font-size:13px;line-height:1.55;color:var(--muted)}
-  footer{max-width:1060px;margin:18px auto 36px;padding:0 16px;color:var(--muted);font-size:12px}
-  .cap-row{display:none}
+  .hidden{display:none !important}
+  .section-title{margin:0 0 8px 0;font-weight:700}
 </style>
 </head>
 <body>
   <header>
-    <img src="logo.jpg" alt="Oneness Compliance Consulting India logo" onerror="this.src='logo.png'">
+    <img src="logo.jpg" alt="Logo">
     <div>
       <h1>GST Late Fee & Interest Calculator</h1>
-      <p class="muted">Accurate slabs, caps & special cases for GSTR-1, 3B, 4, 5, 5A, 6, 7, 8, 9 & CMP-08</p>
+      <p class="hint">Auto-selects due dates by return type, period, and state-wise stagger (for GSTR-3B).</p>
     </div>
   </header>
 
   <div class="wrap">
     <div class="card">
+      <h3 class="section-title">Inputs</h3>
       <div class="grid">
         <div>
+          <label for="state">State / UT</label>
+          <select id="state"></select>
+          <div class="hint">Used for staggered due date (GSTR-3B). For others, standard due date applies.</div>
+        </div>
+
+        <div>
           <label for="rtype">Return Type</label>
-          <select id="rtype" onchange="onTypeChange()">
+          <select id="rtype">
             <option value="">— select —</option>
             <option>GSTR-3B</option>
-            <option>GSTR-1</option>
+            <option>GSTR-1 (Monthly)</option>
+            <option>GSTR-1 (QRMP)</option>
+            <option>CMP-08</option>
             <option>GSTR-4 (Annual)</option>
             <option>GSTR-5</option>
             <option>GSTR-5A</option>
             <option>GSTR-6</option>
             <option>GSTR-7 (TDS)</option>
             <option>GSTR-8 (TCS)</option>
-            <option>CMP-08</option>
             <option>GSTR-9 (Annual)</option>
           </select>
         </div>
 
+        <div id="period-month" class="">
+          <label>Return Period (Monthly)</label>
+          <div class="row">
+            <select id="m-month"></select>
+            <select id="m-year"></select>
+          </div>
+        </div>
+
+        <div id="period-quarter" class="hidden">
+          <label>Return Period (Quarterly)</label>
+          <div class="row">
+            <select id="q-quarter">
+              <option value="Q1">Apr–Jun (Q1)</option>
+              <option value="Q2">Jul–Sep (Q2)</option>
+              <option value="Q3">Oct–Dec (Q3)</option>
+              <option value="Q4">Jan–Mar (Q4)</option>
+            </select>
+            <select id="q-year"></select>
+          </div>
+        </div>
+
+        <div id="period-annual" class="hidden">
+          <label>Financial Year (Annual return)</label>
+          <div class="row">
+            <select id="fy-year"></select>
+          </div>
+        </div>
+
         <div>
-          <label for="due">Due Date</label>
-          <input id="due" type="date">
+          <label for="due">Due Date (auto)</label>
+          <input id="due" type="date" />
+          <div class="hint">Auto-filled from rules. You can edit if an extension applies.</div>
+        </div>
+
+        <div>
+          <label class="row" for="nil">
+            <input id="nil" type="checkbox"> NIL return?
+          </label>
+          <div class="hint">Tick this when there is no tax liability for the period.</div>
+        </div>
+
+        <div id="aato-row" class="hidden">
+          <label for="aato">Annual Turnover (preceding FY)</label>
+          <input id="aato" type="number" min="0" step="1" placeholder="e.g. 7500000" />
+          <div class="hint">Needed to apply late-fee caps for GSTR-1/3B and GSTR-9.</div>
+        </div>
+
+        <div id="tax-row">
+          <label for="tax">Tax / TDS / TCS Amount Payable (₹)</label>
+          <input id="tax" type="number" min="0" step="0.01" placeholder="0.00" />
+          <div class="hint">Interest @ 18% p.a. applies only where the form involves tax payment.</div>
         </div>
 
         <div>
           <label for="filed">Actual Filing / Payment Date</label>
-          <input id="filed" type="date">
-        </div>
-
-        <div>
-          <label for="nil" class="row">
-            <input id="nil" type="checkbox" onchange="onNilChange()"> NIL return?
-          </label>
-          <div class="hint">Tick only when there is **no tax liability** for the period.</div>
-        </div>
-
-        <div id="turnoverRow" class="cap-row">
-          <label for="aato">Annual Turnover (preceding FY)</label>
-          <input id="aato" type="number" min="0" step="1" placeholder="Enter in ₹ (e.g. 7500000)">
-          <div class="hint">Used to apply late-fee caps for GSTR-1/3B and GSTR-9 (cap @ 0.5% of turnover).</div>
-        </div>
-
-        <div id="taxRow">
-          <label for="tax">GST / TDS / TCS Amount Payable (₹)</label>
-          <input id="tax" type="number" min="0" step="0.01" placeholder="0.00">
-          <div class="hint">Interest @ 18% p.a. applies only where tax is payable for that form.</div>
+          <input id="filed" type="date" />
         </div>
       </div>
 
       <div style="margin-top:14px">
-        <button class="btn" onclick="calc()">Calculate Late Fee & Interest</button>
+        <button class="btn" id="calcBtn">Calculate Late Fee & Interest</button>
       </div>
     </div>
 
-    <div id="out" class="card" style="display:none;">
-      <h3 style="margin:0 0 8px 0;">Results</h3>
+    <div id="out" class="card hidden">
+      <h3 class="section-title">Results</h3>
       <div class="result">
-        <div class="tile"><div class="v blue" id="daysV">0</div><div class="muted">Days Delayed</div></div>
-        <div class="tile"><div class="v bad" id="lateV">₹0</div><div class="muted">Late Fee</div></div>
-        <div class="tile"><div class="v warn" id="intV">₹0</div><div class="muted">Interest (18% p.a.)</div></div>
-        <div class="tile"><div class="v" id="totV">₹0</div><div class="muted">Total Payable (Tax + Late + Interest)</div></div>
+        <div class="tile"><div class="v blue" id="daysV">0</div><div class="hint">Days Delayed</div></div>
+        <div class="tile"><div class="v bad" id="lateV">₹0</div><div class="hint">Late Fee</div></div>
+        <div class="tile"><div class="v warn" id="intV">₹0</div><div class="hint">Interest (18% p.a.)</div></div>
+        <div class="tile"><div class="v" id="totV">₹0</div><div class="hint">Total Payable (Tax + Late + Interest)</div></div>
       </div>
       <div class="notes" id="notes" style="margin-top:12px;"></div>
     </div>
   </div>
 
-  <footer>
-    <div>Rules implement current notified slabs/caps; older amnesties or state-specific waivers aren’t auto-applied. Always cross-check before filing.</div>
-  </footer>
-
 <script>
+/* ---------- Helpers ---------- */
 const INR = (n)=> n.toLocaleString('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:2});
+const byId = (id)=>document.getElementById(id);
+const show = (el, yes)=> el.classList.toggle('hidden', !yes);
 
-function show(el, yes){ el.style.display = yes ? 'block' : 'none'; }
+/* ---------- State Groups for Stagger (GSTR-3B) ---------- */
+const GROUP_A = [
+  "Chhattisgarh","Madhya Pradesh","Gujarat","Maharashtra","Karnataka","Goa","Kerala","Tamil Nadu","Telangana","Andhra Pradesh",
+  "Dadra and Nagar Haveli and Daman and Diu","Puducherry","Andaman and Nicobar Islands","Lakshadweep"
+];
+const GROUP_B = [
+  "Himachal Pradesh","Punjab","Uttarakhand","Haryana","Rajasthan","Uttar Pradesh","Bihar","Sikkim","Arunachal Pradesh","Nagaland",
+  "Manipur","Mizoram","Tripura","Meghalaya","Assam","West Bengal","Jharkhand","Odisha","Jammu and Kashmir","Ladakh","Delhi","Chandigarh"
+];
+const ALL_STATES = [...GROUP_A, ...GROUP_B].sort();
+
+/* ---------- Populate selects ---------- */
+(function init(){
+  // States
+  const sSel = byId('state');
+  sSel.innerHTML = '<option value="">— select —</option>' + ALL_STATES.map(s=>`<option>${s}</option>`).join('');
+
+  // Month & Year
+  const months = ["Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar"];
+  byId('m-month').innerHTML = months.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+  const thisYear = new Date().getFullYear();
+  const years = [];
+  for (let y=thisYear-3; y<=thisYear+1; y++) years.push(y);
+  byId('m-year').innerHTML = years.map(y=>`<option>${y}</option>`).join('');
+
+  // Quarter year (FY year = year of Apr)
+  byId('q-year').innerHTML = years.map(y=>`<option>${y}</option>`).join('');
+
+  // FY list for annual (display as FY 2023-24 but value = 2023)
+  const fy = [];
+  for (let y=thisYear-5; y<=thisYear; y++) fy.push(y);
+  byId('fy-year').innerHTML = fy.map(y=>`<option value="${y}">FY ${y}-${String((y+1)%100).padStart(2,'0')}</option>`).join('');
+
+  // Events
+  byId('rtype').addEventListener('change', onTypeChange);
+  ['state','m-month','m-year','q-quarter','q-year','fy-year'].forEach(id=>{
+    byId(id).addEventListener('change', autoDueDate);
+  });
+  byId('nil').addEventListener('change', onNilChange);
+  byId('calcBtn').addEventListener('click', calc);
+
+  onTypeChange(); // set initial visibility
+})();
+
+/* ---------- UI mode switches based on return type ---------- */
 function onTypeChange(){
-  const t = document.getElementById('rtype').value;
-  const needsTurnover = (t==='GSTR-3B' || t==='GSTR-1' || t==='GSTR-9 (Annual)');
-  document.getElementById('turnoverRow').classList.toggle('cap-row', !needsTurnover);
-  document.getElementById('nil').checked = false; // reset
-  onNilChange();
+  const t = byId('rtype').value;
+  const monthly = (t==='GSTR-3B' || t==='GSTR-1 (Monthly)' || t==='GSTR-5' || t==='GSTR-5A' || t==='GSTR-6' || t==='GSTR-7 (TDS)' || t==='GSTR-8 (TCS)');
+  const quarterly = (t==='GSTR-1 (QRMP)' || t==='CMP-08');
+  const annual = (t==='GSTR-4 (Annual)' || t==='GSTR-9 (Annual)');
+
+  show(byId('period-month'), monthly);
+  show(byId('period-quarter'), quarterly);
+  show(byId('period-annual'), annual);
+
+  // AATO required for 1/3B caps & GSTR-9
+  show(byId('aato-row'), (t==='GSTR-3B' || t==='GSTR-1 (Monthly)' || t==='GSTR-1 (QRMP)' || t==='GSTR-9 (Annual)'));
+
+  // Interest relevant forms (tax payable with the form)
+  const taxForms = new Set(['GSTR-3B','GSTR-4 (Annual)','GSTR-5','GSTR-5A','GSTR-7 (TDS)','GSTR-8 (TCS)','CMP-08']);
+  show(byId('tax-row'), taxForms.has(t));
+
+  autoDueDate();
 }
+
+/* ---------- NIL toggle ---------- */
 function onNilChange(){
-  const isNil = document.getElementById('nil').checked;
-  const t = document.getElementById('rtype').value;
-  const taxRow = document.getElementById('taxRow');
-
-  // Interest applies only where tax is paid with the form
-  const taxForms = new Set(['GSTR-3B','GSTR-4 (Annual)','GSTR-5','GSTR-5A','GSTR-7 (TDS)','GSTR-8 (TCS)','CMP-08','GSTR-9 (Annual)']);
-  // (GSTR-9 usually no tax, but keep enabled for edge cases/arrears)
-  show(taxRow, taxForms.has(t));
-  if (!taxForms.has(t)){ document.getElementById('tax').value=''; }
-  // NIL returns imply zero interest (no tax liability). We'll still keep the field in case user wants to simulate.
+  // no extra UI change here; affects per-day late fee in rules
 }
 
-function daysBetween(d1, d2){
-  const ms = 24*3600*1000;
-  const a = new Date(d1), b = new Date(d2);
-  if (isNaN(a) || isNaN(b)) return 0;
-  const raw = Math.ceil((b.getTime()-a.getTime())/ms);
-  return Math.max(0, raw);
+/* ---------- Date helpers ---------- */
+function toISO(y,m,d){ return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function nextMonth(y,m){ // m: 0..11 (Apr=0)
+  // Our UI maps Apr=0..Mar=11 for convenience
+  if (m===11) return {y:y+1,m:0};
+  return {y,m:m+1};
+}
+function quarterEndMonth(q){ return ({Q1:2, Q2:5, Q3:8, Q4:11})[q]; } // Apr=0..Mar=11
+function monthNameIdx(realMonth0to11){
+  // Map Apr=0..Mar=11 to actual Date month index 0..11
+  const map = [3,4,5,6,7,8,9,10,11,0,1,2]; return map[realMonth0to11];
+}
+function dateFromAprIndex(yApr, idx, day){
+  // idx: 0..11 (Apr..Mar) → convert to calendar date
+  const realM = monthNameIdx(idx);
+  const realY = (idx<=8) ? yApr : yApr+1; // Apr..Dec in yApr; Jan..Mar in yApr+1
+  return toISO(realY, realM+1, day);
 }
 
-function rulePackage(type, isNil, aato, dueDate){
-  // Defaults
-  let perDay = 0, cap = 0, note=[], interestAllowed=false;
+/* ---------- Auto due date rules ---------- */
+function autoDueDate(){
+  const t = byId('rtype').value;
+  let dueISO = '';
 
-  const before = (dateStr) => {
-    const d = new Date(dueDate || dateStr);
-    return (new Date(dueDate) < new Date(dateStr));
-  };
+  if (!t) { byId('due').value=''; return; }
+
+  // MONTHLY
+  if (t==='GSTR-3B' || t==='GSTR-1 (Monthly)' || t==='GSTR-5' || t==='GSTR-5A' || t==='GSTR-6' || t==='GSTR-7 (TDS)' || t==='GSTR-8 (TCS)'){
+    const y = parseInt(byId('m-year').value || new Date().getFullYear(), 10);
+    const mIdxApr0 = parseInt(byId('m-month').value || 0, 10); // Apr=0..Mar=11
+    const {y:ny, m:nm} = nextMonth(y, mIdxApr0);
+
+    // Default statutory monthly due dates
+    let day = 20; // default for 3B/5/5A (common)
+    if (t==='GSTR-1 (Monthly)') day = 11;
+    if (t==='GSTR-6') day = 13;
+    if (t==='GSTR-7 (TDS)' || t==='GSTR-8 (TCS)') day = 10;
+
+    // Stagger for GSTR-3B
+   if (t === 'GSTR-3B') {
+  const aatoVal = Number(byId('aato').value || 0); // Annual Turnover
+  const st = byId('state').value || '';
+  const inA = GROUP_A.includes(st);
+  const inB = GROUP_B.includes(st);
+
+  if (aatoVal > 5e7) {
+    // Turnover > ₹5 crore
+    day = 20;
+  } else {
+    // Turnover ≤ ₹5 crore → stagger based on state
+    if (inA) day = 22;
+    if (inB) day = 24;
+  }
+}
+
+    // Convert Apr-indexed month to calendar ISO
+    // ny here is FY-year (Apr year) for the *next* month relative to FY; compute calendar date:
+    const realM = monthNameIdx(nm);
+    const realY = (nm<=8) ? ny : ny+1;
+    dueISO = toISO(realY, realM+1, day);
+  }
+
+  // QUARTERLY
+  if (t==='GSTR-1 (QRMP)' || t==='CMP-08'){
+    const y = parseInt(byId('q-year').value || new Date().getFullYear(), 10);
+    const q = byId('q-quarter').value || 'Q1';
+    const endM = quarterEndMonth(q); // Apr=0..Mar=11
+    const next = (endM===11) ? {y:y+1, m:0} : {y, m:endM+1}; // next month
+    let day = (t==='GSTR-1 (QRMP)') ? 13 : 18;
+    const realM = monthNameIdx(next.m);
+    const realY = (next.m<=8) ? next.y : next.y+1;
+    dueISO = toISO(realY, realM+1, day);
+  }
+
+  // ANNUAL
+  if (t==='GSTR-4 (Annual)'){
+    const fy = parseInt(byId('fy-year').value || new Date().getFullYear()-1, 10);
+    // Due: 30 April following FY
+    dueISO = toISO(fy+1, 4, 30);
+  }
+  if (t==='GSTR-9 (Annual)'){
+    const fy = parseInt(byId('fy-year').value || new Date().getFullYear()-1, 10);
+    // Due: 31 Dec following FY
+    dueISO = toISO(fy+1, 12, 31);
+  }
+
+  byId('due').value = dueISO;
+}
+
+/* ---------- Calculation rules (late fee + caps + interest) ---------- */
+function rulePackage(type, isNil, aato, dueISO){
+  let perDay = 0, cap = Infinity, interestAllowed=false, notes=[];
 
   switch(type){
     case 'GSTR-3B':
-    case 'GSTR-1': {
+    case 'GSTR-1 (Monthly)':
+    case 'GSTR-1 (QRMP)': {
+      // Late fee slabs (commonly applied): ₹50/day; NIL ₹20/day; caps by turnover
       perDay = isNil ? 20 : 50;
       if (isNil) cap = 500;
       else {
-        if (!aato && aato !== 0){ note.push('Turnover needed for cap. Assuming >₹5 crore.'); aato = 5e7+1; }
+        if (!(aato>=0)) { notes.push('Turnover not provided; assuming >₹5 crore for cap.'); aato = 5e7+1; }
         cap = (aato <= 1.5e7) ? 2000 : (aato <= 5e7 ? 5000 : 10000);
       }
-      interestAllowed = (type==='GSTR-3B'); // interest only when tax paid with return
-      note.push('Per-day ₹50 (₹20 for NIL) with caps based on turnover.');
+      interestAllowed = (type==='GSTR-3B'); // interest applies when tax paid with 3B
+      notes.push('Per-day ₹50 (₹20 for NIL) with turnover-based cap.');
       break;
     }
     case 'GSTR-4 (Annual)': {
       perDay = isNil ? 20 : 50;
       cap = isNil ? 500 : 2000;
       interestAllowed = true;
-      note.push('Annual composition return: per-day ₹50 (NIL ₹20) with cap ₹2,000 (NIL ₹500).');
+      notes.push('Annual composition return: ₹50/day (NIL ₹20), cap ₹2,000 (NIL ₹500).');
       break;
     }
     case 'GSTR-5': {
-      perDay = isNil ? 20 : 50;
-      cap = 10000; // ₹5,000 per Act (CGST+SGST) → total ₹10,000
-      interestAllowed = true;
-      note.push('Non-resident taxable person: reduced to ₹50/day (NIL ₹20); cap ₹10,000.');
+      perDay = isNil ? 20 : 50; cap = 10000; interestAllowed = true;
+      notes.push('GSTR-5: ₹50/day (NIL ₹20), cap ₹10,000.');
       break;
     }
     case 'GSTR-5A': {
-      perDay = isNil ? 20 : 50;
-      cap = 5000; // IGST only
-      interestAllowed = true;
-      note.push('OIDAR: reduced to ₹50/day (NIL ₹20); IGST cap ₹5,000.');
+      perDay = isNil ? 20 : 50; cap = 5000; interestAllowed = true;
+      notes.push('GSTR-5A: ₹50/day (NIL ₹20), IGST cap ₹5,000.');
       break;
     }
     case 'GSTR-6': {
-      perDay = isNil ? 20 : 50;
-      cap = 10000; // ₹5,000 per Act → ₹10,000 total
-      interestAllowed = false; // ISD return – no tax payment in the form
-      note.push('ISD return: ₹50/day (NIL ₹20); cap ₹10,000.');
+      perDay = isNil ? 20 : 50; cap = 10000; interestAllowed = false;
+      notes.push('GSTR-6 (ISD): ₹50/day (NIL ₹20), cap ₹10,000; no interest in ISD.');
       break;
     }
     case 'GSTR-7 (TDS)': {
-      // Regime change from Nov 1, 2024 returns onward. If due date < 2024-11-01, use old regime.
-      if (dueDate && new Date(dueDate) < new Date('2024-11-01')) {
-        perDay = isNil ? 200 : 200;
-        cap = 10000;
-        note.push('Old regime (before Nov 2024): ₹200/day, cap ₹10,000.');
-      } else {
-        perDay = isNil ? 0 : 50;
-        cap = isNil ? 0 : 2000;
-        note.push('From Nov 2024 returns: ₹50/day, cap ₹2,000; NIL late fee waived.');
-      }
-      interestAllowed = true;
+      // Simplified: apply current reduced regime
+      perDay = isNil ? 0 : 50; cap = isNil ? 0 : 2000; interestAllowed = true;
+      notes.push('GSTR-7: ₹50/day, cap ₹2,000; NIL late fee waived.');
       break;
     }
     case 'GSTR-8 (TCS)': {
-      // Late fee applicable from Oct 2022 periods onward
-      if (dueDate && new Date(dueDate) < new Date('2022-10-01')) {
-        perDay = 0; cap = 0; note.push('Before Oct 2022: no late fee for GSTR-8.');
-      } else {
-        perDay = 200; cap = 10000;
-        note.push('₹200/day; cap ₹10,000 (from Oct 2022 periods).');
-      }
-      interestAllowed = true;
+      perDay = 200; cap = 10000; interestAllowed = true;
+      notes.push('GSTR-8: ₹200/day, cap ₹10,000.');
+      break;
+    }
+    case 'GSTR-9 (Annual)': {
+      perDay = 200; interestAllowed = false;
+      if (!(aato>=0)) notes.push('Turnover not provided; cap = 0.5% of turnover — enter AATO for exact cap.');
+      cap = (aato>=0) ? (0.005 * aato) : Infinity; // 0.5% of turnover
+      notes.push('GSTR-9: ₹200/day; cap 0.5% of turnover in State/UT.');
       break;
     }
     case 'CMP-08': {
       perDay = 0; cap = 0; interestAllowed = true;
-      note.push('CMP-08: no late fee (only interest, if tax payable).');
-      break;
-    }
-    case 'GSTR-9 (Annual)': {
-      perDay = 200;
-      if (!aato && aato !== 0){ note.push('Turnover needed to apply cap @ 0.5% of turnover.'); }
-      cap = aato ? (0.005 * aato) : Infinity; // total (CGST+SGST)
-      interestAllowed = false;
-      note.push('Annual return: ₹200/day; cap 0.5% of turnover in State/UT.');
+      notes.push('CMP-08: no late fee; interest may apply if tax payable.');
       break;
     }
   }
-  return { perDay, cap, note, interestAllowed };
+  return { perDay, cap, interestAllowed, notes };
+}
+
+/* ---------- Calculate ---------- */
+function daysDiffISO(aISO,bISO){
+  const a=new Date(aISO), b=new Date(bISO);
+  if (isNaN(a)||isNaN(b)) return 0;
+  const ms = 24*3600*1000;
+  return Math.max(0, Math.ceil((b.getTime()-a.getTime())/ms));
 }
 
 function calc(){
-  const type = document.getElementById('rtype').value;
-  const due = document.getElementById('due').value;
-  const filed = document.getElementById('filed').value;
-  const isNil = document.getElementById('nil').checked;
-  const aato = Number(document.getElementById('aato').value || NaN);
-  const tax = Number(document.getElementById('tax').value || 0);
+  const t = byId('rtype').value;
+  const due = byId('due').value;
+  const filed = byId('filed').value;
+  const isNil = byId('nil').checked;
+  const aato = Number(byId('aato').value || NaN);
+  const tax = Number(byId('tax').value || 0);
 
-  if (!type || !due || !filed){
-    alert('Please select return type and both dates.');
-    return;
-  }
+  if (!t || !due || !filed){ alert('Please complete Return Type, Period (so due date can be set), and Filing Date.'); return; }
 
-  const days = daysBetween(due, filed);
-  const pkg = rulePackage(type, isNil, aato, due);
+  const days = daysDiffISO(due, filed);
+  const pkg = rulePackage(t, isNil, aato, due);
 
   // Late fee
-  let late = Math.min(pkg.perDay * days, pkg.cap || Infinity);
+  let late = Math.min(pkg.perDay * days, pkg.cap);
   if (!isFinite(late)) late = pkg.perDay * days;
 
-  // Interest @ 18% p.a. only if applicable
+  // Interest (18% p.a.) when applicable and tax>0
   let interest = 0;
   if (pkg.interestAllowed && tax > 0 && days > 0){
     interest = Math.round((tax * 0.18 * days / 365) * 100)/100;
   }
 
-  const total = (tax || 0) + late + interest;
+  const total = (tax||0) + late + interest;
 
-  // Paint
-  document.getElementById('out').style.display = 'block';
-  document.getElementById('daysV').textContent = days.toString();
-  document.getElementById('lateV').textContent = INR(late);
-  document.getElementById('intV').textContent = INR(interest);
-  document.getElementById('totV').textContent = INR(total);
-  document.getElementById('notes').innerHTML =
-    `<strong>Applied rule:</strong> ${pkg.note.join(' ')} ` +
-    (isNil ? '(NIL return selected.) ' : '') +
-    ((type==='GSTR-1') ? 'Interest not computed for GSTR-1.' : '') +
-    ((type==='GSTR-6') ? 'Interest not applicable for GSTR-6 (ISD).' : '');
+  // Paint results
+  byId('out').classList.remove('hidden');
+  byId('daysV').textContent = String(days);
+  byId('lateV').textContent = INR(late);
+  byId('intV').textContent = INR(interest);
+  byId('totV').textContent = INR(total);
+
+  const bits = [];
+  if (pkg.notes.length) bits.push(`<div>Rule: ${pkg.notes.join(' ')}</div>`);
+  bits.push(`<div><strong>Due:</strong> ${due} &nbsp; <strong>Filed:</strong> ${filed}</div>`);
+  if (t.includes('GSTR-3B')) {
+    const st = byId('state').value || '(no state selected)';
+    bits.push(`<div>Stagger applied for GSTR-3B based on state: <em>${st}</em>.</div>`);
+  }
+  if (t==='GSTR-9 (Annual)' && !(aato>=0)) bits.push('<div>Tip: Enter AATO to apply the 0.5% turnover cap precisely.</div>');
+  byId('notes').innerHTML = bits.join('');
 }
-
 </script>
 </body>
 </html>
-
-
